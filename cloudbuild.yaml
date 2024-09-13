@@ -12,7 +12,7 @@ steps:
   - 'deployment/hello-world-deployment'
   - 'hello-world-container=us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest'
   env:
-  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1'
   - 'CLOUDSDK_CONTAINER_CLUSTER=my-gke-cluster'
 
 images:
