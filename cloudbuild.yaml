@@ -1,22 +1,21 @@
 steps:
+# Build the Docker image
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest', '.']
 
+# Push the Docker image to the registry
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest']
 
+# Deploy the Kubernetes manifest
 - name: 'gcr.io/cloud-builders/kubectl'
-  args:
-  - 'set'
-  - 'image'
-  - 'deployment/hello-world-deployment'
-  - 'hello-world-container=us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest'
+  args: ['apply', '-f', 'deployment.yaml']
   env:
   - 'CLOUDSDK_COMPUTE_ZONE=us-central1'
   - 'CLOUDSDK_CONTAINER_CLUSTER=my-gke-cluster'
 
 images:
 - 'us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest'
+
 options:
   logging: CLOUD_LOGGING_ONLY
-
