@@ -17,3 +17,6 @@ steps:
 
 images:
 - 'us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest'
+options:
+  logging: CLOUD_LOGGING_ONLY
+
