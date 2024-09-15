@@ -1,21 +1,46 @@
 steps:
+# Create Artifact Registry repository (if not exists)
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    gcloud artifacts repositories create nodejs-app-repo \
+      --repository-format=docker \
+      --location=us-central1 \
+      --description="Docker repository for Node.js app" \
+      || true
+
 # Build the Docker image
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest', '.']
+  args: ['build', '-t', 'us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}', '.']
 
-# Push the Docker image to the registry
+# Push the image to Artifact Registry
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest']
+  args: ['push', 'us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}']
 
-# Deploy the Kubernetes manifest
+# Apply Kubernetes manifests
 - name: 'gcr.io/cloud-builders/kubectl'
-  args: ['apply', '-f', 'deployment.yaml']
+  args:
+  - 'apply'
+  - '-f'
+  - 'k8s/'
   env:
-  - 'CLOUDSDK_COMPUTE_ZONE=us-central1'
-  - 'CLOUDSDK_CONTAINER_CLUSTER=my-gke-cluster'
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=your-cluster-name'
+  - 'CLOUDSDK_CONTAINER_USE_CLIENT_CERTIFICATE=False'
+
+# Update the deployment to use the new image
+- name: 'gcr.io/cloud-builders/kubectl'
+  args:
+  - 'set'
+  - 'image'
+  - 'deployment/nodejs-app-deployment'
+  - 'nodejs-app=us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}'
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=your-cluster-name'
+  - 'CLOUDSDK_CONTAINER_USE_CLIENT_CERTIFICATE=False'
 
 images:
-- 'us-central1-docker.pkg.dev/burner-navsharm6/hello-world-repo/hello-world:latest'
-
-options:
-  logging: CLOUD_LOGGING_ONLY
+- 'us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}'
