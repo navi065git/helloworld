@@ -2,7 +2,7 @@
   "name": "gke-demo-app",
   "version": "1.0.0",
   "description": "A demo app to showcase GKE deployment and the importance of Generative AI.",
-  "main": "app.js",  // Specify app.js as the entry point
+  "main": "app.js",
   "scripts": {
     "start": "node app.js"
   },
