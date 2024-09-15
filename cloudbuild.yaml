@@ -1,42 +1,40 @@
 steps:
-# Create Artifact Registry repository (if not exists)
-- name: 'gcr.io/cloud-builders/gcloud'
+# Step 1: Create Artifact Registry repository (if it doesn't exist)
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
+    gcloud artifacts repositories describe ${_REPO_NAME} \
+      --project=${PROJECT_ID} \
+      --location=${_REGION} || \
     gcloud artifacts repositories create ${_REPO_NAME} \
       --project=${PROJECT_ID} \
       --repository-format=docker \
       --location=${_REGION} \
-      --description="Docker repository for Node.js app" \
-      || true
+      --description="Docker repository for Node.js app"
+  id: 'Create Artifact Registry'
 
-# Build the Docker image
+# Step 2: Build the Docker image
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}', '.']
+  id: 'Build Docker image'
 
-# Push the image to Artifact Registry
+# Step 3: Push the Docker image to Artifact Registry
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}']
+  id: 'Push to Artifact Registry'
 
-# Apply Kubernetes manifests
+# Step 4: Apply Kubernetes manifests
 - name: 'gcr.io/cloud-builders/kubectl'
-  args:
-  - 'apply'
-  - '-f'
-  - 'k8s/'
+  args: ['apply', '-f', 'k8s/']
   env:
   - 'CLOUDSDK_COMPUTE_REGION=${_REGION}'
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
   - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}'
-  - 'CLOUDSDK_CONTAINER_USE_CLIENT_CERTIFICATE=False'
-  - 'KUBECTL_VERSION=1.30'
-  - 'USE_GKE_GCLOUD_AUTH_PLUGIN=True'
-  - 'CLOUDSDK_CORE_DISABLE_PROMPTS=1'
-  - 'KUBECTL_BEHAVIOR=native'
-  - 'CLOUDSDK_RUN_STRACE_BEHAVIOR=NONE'
+  id: 'Apply Kubernetes manifests'
 
-# Update the deployment to use the new image
+# Step 5: Update the Kubernetes deployment
 - name: 'gcr.io/cloud-builders/kubectl'
   args:
   - 'set'
@@ -45,20 +43,15 @@ steps:
   - '${_CONTAINER_NAME}=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}'
   env:
   - 'CLOUDSDK_COMPUTE_REGION=${_REGION}'
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
   - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}'
-  - 'CLOUDSDK_CONTAINER_USE_CLIENT_CERTIFICATE=False'
-  - 'KUBECTL_VERSION=1.30'
-  - 'USE_GKE_GCLOUD_AUTH_PLUGIN=True'
-  - 'CLOUDSDK_CORE_DISABLE_PROMPTS=1'
-  - 'KUBECTL_BEHAVIOR=native'
-  - 'CLOUDSDK_RUN_STRACE_BEHAVIOR=NONE'
+  id: 'Update Kubernetes deployment'
 
-options:
-  logging: CLOUD_LOGGING_ONLY
-
+# Images to be pushed to Artifact Registry
 images:
 - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}'
 
+# Substitutions
 substitutions:
   _REPO_NAME: nodejs-app-repo
   _REGION: us-central1
@@ -67,3 +60,7 @@ substitutions:
   _CLUSTER_NAME: my-gke-cluster
   _DEPLOYMENT_NAME: nodejs-app-deployment
   _CONTAINER_NAME: nodejs-app
+
+# Logging configuration
+options:
+  logging: CLOUD_LOGGING_ONLY
