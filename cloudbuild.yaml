@@ -5,19 +5,20 @@ steps:
   args:
   - '-c'
   - |
-    gcloud artifacts repositories create nodejs-app-repo \
+    gcloud artifacts repositories create ${_REPO_NAME} \
+      --project=${PROJECT_ID} \
       --repository-format=docker \
-      --location=us-central1 \
+      --location=${_REGION} \
       --description="Docker repository for Node.js app" \
       || true
 
 # Build the Docker image
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}', '.']
+  args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}', '.']
 
 # Push the image to Artifact Registry
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}']
+  args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}']
 
 # Apply Kubernetes manifests
 - name: 'gcr.io/cloud-builders/kubectl'
@@ -26,8 +27,8 @@ steps:
   - '-f'
   - 'k8s/'
   env:
-  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
-  - 'CLOUDSDK_CONTAINER_CLUSTER=your-cluster-name'
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}'
   - 'CLOUDSDK_CONTAINER_USE_CLIENT_CERTIFICATE=False'
 
 # Update the deployment to use the new image
@@ -35,12 +36,21 @@ steps:
   args:
   - 'set'
   - 'image'
-  - 'deployment/nodejs-app-deployment'
-  - 'nodejs-app=us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}'
+  - 'deployment/${_DEPLOYMENT_NAME}'
+  - '${_CONTAINER_NAME}=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}'
   env:
-  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
-  - 'CLOUDSDK_CONTAINER_CLUSTER=your-cluster-name'
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}'
   - 'CLOUDSDK_CONTAINER_USE_CLIENT_CERTIFICATE=False'
 
 images:
-- 'us-central1-docker.pkg.dev/${PROJECT_ID}/nodejs-app-repo/nodejs-app:${SHORT_SHA}'
+- '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${SHORT_SHA}'
+
+substitutions:
+  _REPO_NAME: nodejs-app-repo
+  _REGION: us-central1
+  _IMAGE_NAME: nodejs-app
+  _ZONE: us-central1-a
+  _CLUSTER_NAME: my-gke-cluster
+  _DEPLOYMENT_NAME: nodejs-app-deployment
+  _CONTAINER_NAME: nodejs-app
