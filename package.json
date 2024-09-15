@@ -1,12 +1,12 @@
 {
-  "name": "hello-world-app",
+  "name": "gke-demo-app",
   "version": "1.0.0",
-  "description": "Simple Hello World App",
-  "main": "app.js",
-  "dependencies": {
-    "express": "^4.17.1"
-  },
+  "description": "A demo app to showcase GKE deployment and the importance of Generative AI.",
+  "main": "app.js",  // Specify app.js as the entry point
   "scripts": {
     "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
   }
 }
